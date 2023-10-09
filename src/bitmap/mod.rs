@@ -20,6 +20,9 @@ use self::cmp::Pairs;
 pub use self::iter::IntoIter;
 pub use self::iter::Iter;
 
+pub use self::container::Container;
+pub use self::store::{ArrayStore, BitmapStore};
+
 /// A compressed bitmap using the [Roaring bitmap compression scheme](https://roaringbitmap.org/).
 ///
 /// # Examples
