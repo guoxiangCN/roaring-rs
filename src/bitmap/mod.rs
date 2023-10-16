@@ -1,10 +1,11 @@
 mod arbitrary;
-mod container;
 mod fmt;
 mod multiops;
 mod proptests;
-mod store;
 mod util;
+
+pub mod store;
+pub mod container;
 
 // Order of these modules matters as it determines the `impl` blocks order in
 // the docs
@@ -19,9 +20,6 @@ mod serialization;
 use self::cmp::Pairs;
 pub use self::iter::IntoIter;
 pub use self::iter::Iter;
-
-pub use self::container::Container;
-pub use self::store::{ArrayStore, BitmapStore};
 
 /// A compressed bitmap using the [Roaring bitmap compression scheme](https://roaringbitmap.org/).
 ///
