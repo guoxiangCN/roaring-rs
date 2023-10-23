@@ -2,8 +2,8 @@ mod arbitrary;
 mod fmt;
 mod multiops;
 mod proptests;
-mod util;
 
+pub mod util;
 pub mod store;
 pub mod container;
 
