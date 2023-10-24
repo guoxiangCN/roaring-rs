@@ -3,9 +3,9 @@ mod fmt;
 mod multiops;
 mod proptests;
 
-pub mod util;
-pub mod store;
 pub mod container;
+pub mod store;
+pub mod util;
 
 // Order of these modules matters as it determines the `impl` blocks order in
 // the docs
@@ -40,4 +40,15 @@ pub use self::iter::Iter;
 #[derive(PartialEq)]
 pub struct RoaringBitmap {
     containers: Vec<container::Container>,
+}
+
+impl RoaringBitmap {
+
+    /// Allow user to access the roaring bitmap in container.
+    pub fn foreach_container<F>(&self, f: F)
+    where
+        F: Fn(&container::Container),
+    {
+        self.containers.iter().for_each(f)
+    }
 }
