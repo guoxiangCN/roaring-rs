@@ -43,11 +43,10 @@ pub struct RoaringBitmap {
 }
 
 impl RoaringBitmap {
-
     /// Allow user to access the roaring bitmap in container.
     pub fn foreach_container<F>(&self, f: F)
     where
-        F: Fn(&container::Container),
+        F: FnMut(&container::Container),
     {
         self.containers.iter().for_each(f)
     }
