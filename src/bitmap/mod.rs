@@ -50,4 +50,10 @@ impl RoaringBitmap {
     {
         self.containers.iter().for_each(f)
     }
+
+    /// Make the roaring bitmap from provided containers.
+    pub fn from_containers(mut containers: Vec<container::Container>) -> Self {
+        containers.sort_by_key(|c| c.key);
+        Self { containers }
+    }
 }
