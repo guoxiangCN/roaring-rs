@@ -106,18 +106,20 @@ impl RoaringBitmap {
         let mut empty_container = Container::new(0);
         let mut container_key = start_container_key;
         while container_key <= end_container_key {
-            let container_ref = match self.containers.binary_search_by_key(&container_key, |c|c.key) {
-                Ok(idx) => &self.containers[idx],
-                Err(_) => {
-                    empty_container.key = container_key;
-                    &empty_container
-                },
-            };
-
-            if let Some(idx) = container_ref.range_first0(start_index..=end_index) {
+            let container_ref =
+                match self.containers.binary_search_by_key(&container_key, |c| c.key) {
+                    Ok(idx) => &self.containers[idx],
+                    Err(_) => {
+                        empty_container.key = container_key;
+                        &empty_container
+                    }
+                };
+            let begin = if container_key == start_container_key { start_index } else { 0 };
+            let end = if container_key == end_container_key { end_index } else { u16::MAX };
+            if let Some(idx) = container_ref.range_first0(begin..=end) {
                 return Some(join(container_key, idx));
             }
-            
+
             container_key += 1;
         }
 
@@ -126,11 +128,10 @@ impl RoaringBitmap {
 }
 
 mod tests {
-    
 
     #[test]
     fn test_vector_binary_search() {
-        let offsets = vec![100,200,300,400,500,600];
+        let offsets = vec![100, 200, 300, 400, 500, 600];
         match offsets.binary_search(&800) {
             Ok(idx) => println!("ok, idx={}", idx),
             Err(idx) => println!("err, idx={}", idx),
