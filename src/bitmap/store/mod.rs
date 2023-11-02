@@ -204,7 +204,7 @@ impl Store {
     pub fn range_first0(&self, range: RangeInclusive<u16>) -> Option<u16> {
         match self {
             Array(vec) => vec.range_first0(range),
-            Bitmap(bits) => todo!(),
+            Bitmap(bits) => bits.range_first0(range),
         }
     }
 

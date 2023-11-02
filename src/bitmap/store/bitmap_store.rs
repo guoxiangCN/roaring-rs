@@ -278,6 +278,31 @@ impl BitmapStore {
         None
     }
 
+    /// Find the first bit0 in the bitmap container within the given range.
+    pub fn range_first0(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        let (start, end) = (*range.start(), *range.end());
+        let (start_key, start_bit) = (key(start), bit(start));
+        let (end_key, end_bit) = (key(end), bit(end));
+
+        for n in start_key..=end_key {
+            let mut bit = self.bits[n];
+            if n == start_key {
+                bit |= !(u64::MAX << start_bit);
+            }
+            if n == end_key {
+                bit |= !(u64::MAX >> (63 - end_bit));
+            }
+
+            if bit.count_zeros() != 0 {
+                // INVARINT: at lease have a 0 bit, so the index nerver over the end_bit.
+                let index = bit.trailing_ones() as usize;
+                return Some((start_key * 64 + index) as u16);
+            } 
+        }
+
+        None
+    }
+
     pub fn rank(&self, index: u16) -> u64 {
         let (key, bit) = (key(index), bit(index));
 
