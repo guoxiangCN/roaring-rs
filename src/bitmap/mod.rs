@@ -20,6 +20,7 @@ mod serialization;
 use std::ops::RangeBounds;
 
 use self::cmp::Pairs;
+use self::container::Container;
 pub use self::iter::IntoIter;
 pub use self::iter::Iter;
 use self::util::join;
@@ -84,6 +85,40 @@ impl RoaringBitmap {
                 }
             }
             index += 1;
+        }
+
+        None
+    }
+
+    /// Find the first 0 within the given range.
+    pub fn range_first0<R>(&self, range: R) -> Option<u32>
+    where
+        R: RangeBounds<u32>,
+    {
+        let (start, end) = match util::convert_range_to_inclusive(range) {
+            Some(range) => (*range.start(), *range.end()),
+            None => return None,
+        };
+
+        let (start_container_key, start_index) = util::split(start);
+        let (end_container_key, end_index) = util::split(end);
+
+        let mut empty_container = Container::new(0);
+        let mut container_key = start_container_key;
+        while container_key <= end_container_key {
+            let container_ref = match self.containers.binary_search_by_key(&container_key, |c|c.key) {
+                Ok(idx) => &self.containers[idx],
+                Err(_) => {
+                    empty_container.key = container_key;
+                    &empty_container
+                },
+            };
+
+            if let Some(idx) = container_ref.range_first0(start_index..=end_index) {
+                return Some(join(container_key, idx));
+            }
+            
+            container_key += 1;
         }
 
         None
