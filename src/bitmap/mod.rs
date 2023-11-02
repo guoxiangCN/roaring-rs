@@ -114,8 +114,10 @@ impl RoaringBitmap {
                         &empty_container
                     }
                 };
+
             let begin = if container_key == start_container_key { start_index } else { 0 };
             let end = if container_key == end_container_key { end_index } else { u16::MAX };
+
             if let Some(idx) = container_ref.range_first0(begin..=end) {
                 return Some(join(container_key, idx));
             }
