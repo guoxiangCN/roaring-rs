@@ -17,9 +17,12 @@ mod ops;
 mod serde;
 mod serialization;
 
+use std::ops::RangeBounds;
+
 use self::cmp::Pairs;
 pub use self::iter::IntoIter;
 pub use self::iter::Iter;
+use self::util::join;
 
 /// A compressed bitmap using the [Roaring bitmap compression scheme](https://roaringbitmap.org/).
 ///
@@ -55,5 +58,47 @@ impl RoaringBitmap {
     pub fn from_containers(mut containers: Vec<container::Container>) -> Self {
         containers.sort_by_key(|c| c.key);
         Self { containers }
+    }
+
+    /// Find the first 1 within the given range.
+    pub fn range_first1<R>(&self, range: R) -> Option<u32>
+    where
+        R: RangeBounds<u32>,
+    {
+        let (start, end) = match util::convert_range_to_inclusive(range) {
+            Some(range) => (*range.start(), *range.end()),
+            None => return None,
+        };
+
+        let (start_container_key, start_index) = util::split(start);
+        let (end_container_key, end_index) = util::split(end);
+
+        let mut index = 0;
+        while index < self.containers.len() {
+            let key = self.containers[index].key;
+            if key >= start_container_key && key <= end_container_key {
+                let begin = if key == start_container_key { start_index } else { 0_u16 };
+                let end = if key == end_container_key { end_index } else { u16::MAX };
+                if let Some(firstx) = self.containers[index].range_first1(begin..=end) {
+                    return Some(join(key, firstx));
+                }
+            }
+            index += 1;
+        }
+
+        None
+    }
+}
+
+mod tests {
+    
+
+    #[test]
+    fn test_vector_binary_search() {
+        let offsets = vec![100,200,300,400,500,600];
+        match offsets.binary_search(&800) {
+            Ok(idx) => println!("ok, idx={}", idx),
+            Err(idx) => println!("err, idx={}", idx),
+        }
     }
 }

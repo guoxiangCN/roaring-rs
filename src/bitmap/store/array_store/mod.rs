@@ -210,6 +210,49 @@ impl ArrayStore {
         }
     }
 
+    /// return the first offset value within the given range.
+    pub fn range_first1(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        let (rstart, rend) = (*range.start(), *range.end());
+        match self.vec.binary_search(&rstart) {
+            Ok(_) => return Some(rstart),
+            Err(idx) => {
+                if idx >= self.vec.len() {
+                    return None;
+                }
+                let prio = self.vec[idx];
+                if prio <= rend {
+                    return Some(prio);
+                }
+                return None;
+            }
+        }
+    }
+
+    /// return the first non-exists offset within the given range.
+    pub fn range_first0(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        let (rstart, rend) = (*range.start(), *range.end());
+        let mut search_index = match self.vec.binary_search(&rstart) {
+            Err(_) => return Some(rstart),
+            Ok(idx) => idx,
+        };
+
+        let mut cur;
+        loop {
+            cur = self.vec[search_index];
+            if let Some(next) = self.vec.get(search_index + 1).cloned() {
+                if cur.checked_add(1)? < next {
+                    return cur.checked_add(1).filter(|v|*v<=rend);
+                }
+            } else {
+                if cur.checked_add(1)? <= rend {
+                    return Some(cur + 1)
+                }
+                return None;
+            }
+            search_index += 1;
+        }
+    }
+
     pub fn select(&self, n: u16) -> Option<u16> {
         self.vec.get(n as usize).cloned()
     }
@@ -584,5 +627,63 @@ mod tests {
         let mut store = Store::Array(ArrayStore::from_vec_unchecked(vec![1, 2, 130, 500]));
         store.remove_biggest(2);
         assert_eq!(into_vec(store), vec![1, 2]);
+    }
+
+    #[test]
+    fn test_array_range_first1_common_case() {
+        let mut store = ArrayStore::new();
+        for index in vec![1, 2, 1092, 2222, 3333, 4446, 9999] {
+            store.insert(index);
+        }
+        assert_eq!(None, store.range_first1(10000..=u16::MAX));
+        assert_eq!(None, store.range_first1(124..=255));
+        assert_eq!(None, store.range_first1(256..=257));
+        assert_eq!(None, store.range_first1(256..=256));
+
+        assert_eq!(Some(1), store.range_first1(0..=u16::MAX));
+        assert_eq!(Some(1092), store.range_first1(200..=u16::MAX));
+        assert_eq!(Some(2222), store.range_first1(2222..=3333));
+        assert_eq!(Some(9999), store.range_first1(9876..=9999));
+        assert_eq!(Some(9999), store.range_first1(9999..=9999));
+    }
+
+    #[test]
+    fn test_array_range_first1_max_case() {
+        let mut store = ArrayStore::new();
+        for index in vec![1, 123, 256, 1092, 2222, 3333, 4446, 9877, 65535] {
+            store.insert(index);
+        }
+        assert_eq!(Some(123), store.range_first1(0..=u16::MAX));
+        assert_eq!(Some(256), store.range_first1(200..=u16::MAX));
+        assert_eq!(Some(256), store.range_first1(256..=257));
+        assert_eq!(Some(256), store.range_first1(256..=256));
+        assert_eq!(Some(2222), store.range_first1(2222..=3333));
+        assert_eq!(Some(9877), store.range_first1(9876..=9999));
+
+        assert_eq!(Some(65535), store.range_first1(9878..=u16::MAX));
+        assert_eq!(Some(65535), store.range_first1(65534..=u16::MAX));
+        assert_eq!(Some(65535), store.range_first1(65535..=u16::MAX));
+        assert_eq!(Some(65535), store.range_first1(65535..=65535));
+
+        assert_eq!(None, store.range_first1(124..=255));
+    }
+
+    #[test]
+    fn test_array_range_first0() {
+        let mut store = ArrayStore::new();
+        for index in vec![1, 123, 256, 1092, 2222, 3333, 4446, 9877, 65535] {
+            store.insert(index);
+        }
+
+        assert_eq!(Some(0), store.range_first0(0..=u16::MAX));
+        assert_eq!(Some(2), store.range_first0(1..=u16::MAX));
+        assert_eq!(Some(124), store.range_first0(123..=u16::MAX));
+        assert_eq!(Some(255), store.range_first0(255..=u16::MAX));
+        assert_eq!(Some(257), store.range_first0(256..=u16::MAX));
+        assert_eq!(Some(1000), store.range_first0(1000..=u16::MAX));
+        assert_eq!(Some(65534), store.range_first0(65534..=u16::MAX));
+        assert_eq!(None, store.range_first0(65535..=u16::MAX));
+        assert_eq!(Some(124), store.range_first0(123..=124));
+        assert_eq!(None, store.range_first0(123..=123));
     }
 }

@@ -253,6 +253,31 @@ impl BitmapStore {
             .map(|(index, bit)| (index * 64 + (63 - bit.leading_zeros() as usize)) as u16)
     }
 
+    /// Find the first bit1 in the bitmap container within the given range.
+    pub fn range_first1(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        let (start, end) = (*range.start(), *range.end());
+        let (start_key, start_bit) = (key(start), bit(start));
+        let (end_key, end_bit) = (key(end), bit(end));
+
+        for n in start_key..=end_key {
+            let mut bit = self.bits[n];
+            if bit == 0 {
+                continue;
+            }
+            if n == start_key {
+                bit &= u64::MAX << start_bit;
+            }
+            if n == end_key {
+                bit &= u64::MAX >> (63 - end_bit);
+            }
+            if bit.count_ones() != 0 {
+                let index = bit.trailing_zeros() as usize;
+                return Some((start_key * 64 + index) as u16);
+            }
+        }
+        None
+    }
+
     pub fn rank(&self, index: u16) -> u64 {
         let (key, bit) = (key(index), bit(index));
 
@@ -574,5 +599,46 @@ mod tests {
             store.bits[1023],
             0b11111111111111111111111111111111111111111111111111111111111111
         );
+    }
+
+    #[test]
+    fn test_bitmap_range_first1() {
+        let mut store = BitmapStore::new();
+        for offset in vec![1, 3, 5, 7, 9, 63, 64, 66, 79, 127, 128, 129] {
+            store.insert(offset);
+        }
+
+        assert_eq!(Some(1), store.range_first1(0..=u16::MAX));
+        assert_eq!(Some(3), store.range_first1(2..=u16::MAX));
+        assert_eq!(Some(3), store.range_first1(3..=u16::MAX));
+        assert_eq!(Some(5), store.range_first1(4..=u16::MAX));
+        assert_eq!(Some(9), store.range_first1(8..=u16::MAX));
+        assert_eq!(None, store.range_first1(2..=2));
+        assert_eq!(None, store.range_first1(4..=4));
+        assert_eq!(None, store.range_first1(6..=6));
+        assert_eq!(None, store.range_first1(8..=8));
+        assert_eq!(Some(63), store.range_first1(10..=u16::MAX));
+        assert_eq!(Some(63), store.range_first1(62..=u16::MAX));
+        assert_eq!(Some(63), store.range_first1(63..=u16::MAX));
+        assert_eq!(Some(64), store.range_first1(64..=u16::MAX));
+        assert_eq!(Some(127), store.range_first1(127..=u16::MAX));
+    }
+
+    #[test]
+    fn test_bitmap_range_first1_conor_case() {
+        let mut store = BitmapStore::new();
+        for offset in vec![1, 2, 3, 4, 5, 6, 56, 57, 58, 62, 63] {
+            store.insert(offset);
+        }
+        assert_eq!(Some(1), store.range_first1(0..=64));
+        assert_eq!(Some(1), store.range_first1(1..=64));
+        assert_eq!(Some(2), store.range_first1(2..=64));
+        assert_eq!(Some(3), store.range_first1(3..=64));
+        assert_eq!(Some(4), store.range_first1(4..=64));
+        assert_eq!(Some(5), store.range_first1(5..=64));
+        assert_eq!(Some(6), store.range_first1(6..=64));
+        assert_eq!(Some(56), store.range_first1(7..=64));
+        assert_eq!(None, store.range_first1(50..=55));
+        assert_eq!(Some(56), store.range_first1(50..=56));
     }
 }

@@ -194,6 +194,20 @@ impl Store {
         }
     }
 
+    pub fn range_first1(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        match self {
+            Array(vec) => vec.range_first1(range),
+            Bitmap(bits) => bits.range_first1(range),
+        }
+    }
+
+    pub fn range_first0(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        match self {
+            Array(vec) => vec.range_first0(range),
+            Bitmap(bits) => todo!(),
+        }
+    }
+
     pub fn select(&self, n: u16) -> Option<u16> {
         match self {
             Array(vec) => vec.select(n),

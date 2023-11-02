@@ -152,6 +152,10 @@ impl Container {
         self.store.min()
     }
 
+    pub fn range_first1(&self, range: RangeInclusive<u16>) -> Option<u16> {
+        self.store.range_first1(range)
+    }
+
     pub fn max(&self) -> Option<u16> {
         self.store.max()
     }
